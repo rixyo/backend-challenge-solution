@@ -1,11 +1,11 @@
 import bcrypt from "bcrypt";
 import request from "supertest";
 import mongoose from "mongoose";
-
+import dotenv from "dotenv";
 import app from "../../src/app";
 import User from "../../src/models/User";
 import { SUCCESS_MESSAGES, ERROR_MESSAGES } from "../../src/constants/messages";
-
+dotenv.config();
 describe("POST /auth/signup", () => {
   afterEach(async () => {
     await User.deleteMany({});
@@ -143,6 +143,7 @@ describe("POST /auth/logout", () => {
     const loginResponse = await request(app)
       .post("/auth/login")
       .send({ email, password });
+    console.table(loginResponse.body);
 
     expect(loginResponse.status).toBe(200);
     expect(loginResponse.body).toHaveProperty(
@@ -167,6 +168,8 @@ describe("POST /auth/logout", () => {
       .set("Cookie", `refreshToken=${refreshTokenCookie}`)
       .timeout(2000);
 
+    console.table(logoutResponse.body);
+
     expect(logoutResponse.status).toBe(204);
 
     const leadCreationResponse = await request(app)
@@ -177,12 +180,12 @@ describe("POST /auth/logout", () => {
         email: "lead@test.com",
         phone: "1234567890",
       });
+    console.log(leadCreationResponse.body, "leadCreationResponse");
 
     expect(leadCreationResponse.status).toBe(401);
-    expect(leadCreationResponse.body).toHaveProperty(
-      "error",
-      ERROR_MESSAGES.UNAUTHORIZED
-    );
+    expect(leadCreationResponse.body).toMatchObject({
+      message: ERROR_MESSAGES.UNAUTHORIZED,
+    });
   });
 
   it("should not invalidate all accessToken-s of a single user account if one account is logged out", async () => {
@@ -204,9 +207,11 @@ describe("POST /auth/logout", () => {
     const tokenOne = firstLoginResponse.body.accessToken;
     const tokenTwo = secondLoginResponse.body.accessToken;
 
-    const cookies = firstLoginResponse.headers["set-cookie"];
-    // @ts-ignore
-    const refreshTokenCookie = cookies.find((cookie: string) =>
+    const cookies = Array.isArray(firstLoginResponse.headers["set-cookie"])
+      ? firstLoginResponse.headers["set-cookie"]
+      : [firstLoginResponse.headers["set-cookie"]];
+
+    const refreshTokenCookie = cookies.find((cookie) =>
       cookie.startsWith("refreshToken=")
     );
 
@@ -226,6 +231,8 @@ describe("POST /auth/logout", () => {
         email: "lead@test.com",
         phone: "1234567890",
       });
+
+    console.table(leadCreationResponse.body);
 
     expect(leadCreationResponse.status).toBe(201);
   });
