@@ -1,11 +1,12 @@
 import bcrypt from "bcrypt";
+import dotenv from "dotenv";
 import request from "supertest";
 import app from "../../src/app";
 import Lead from "../../src/models/Lead";
 import User, { IUser } from "../../src/models/User";
 import mongoose from "mongoose";
 import { SUCCESS_MESSAGES, ERROR_MESSAGES } from "../../src/constants/messages";
-
+dotenv.config();
 describe("Lead Routes", () => {
   let token: string;
   let user: IUser;

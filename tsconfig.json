@@ -6,10 +6,11 @@
     "esModuleInterop": true, // Fixes default imports for CommonJS modules
     "skipLibCheck": true, // Skip type-checking of declaration files
     "outDir": "./dist", // Output directory for transpiled files
-    "typeRoots": ["./node_modules/@types", "./src/types"],
+    "typeRoots": ["./node_modules/@types", "./src/types"], // Type definition files
     "noUnusedLocals": false,
+    "types": ["node", "express", "jest"], // Type declaration files to be included in compilation
     "noUnusedParameters": false
   },
-  "include": ["src/**/*", "src/types/global.d.ts"], // Include all TypeScript files in src
+  "include": ["src/**/*", "src/types/global.d.ts", "tests/**/*", "tests"], // Include all files in the src folder
   "exclude": ["node_modules"] // Exclude node_modules folder
 }

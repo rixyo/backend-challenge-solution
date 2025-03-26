@@ -1,10 +1,26 @@
 import bcrypt from "bcrypt";
 import { Request, Response } from "express";
+import dotenv from "dotenv";
 import User from "../../src/models/User";
+import { login, logout, signup } from "../../src/controllers/authController";
 import { ERROR_MESSAGES } from "../../src/constants/messages";
-import { signup, login } from "../../src/controllers/authController";
+import { redisClient } from "../../src/utils/redis";
+dotenv.config();
 jest.mock("../../src/models/User");
 
+jest.mock("../../src/utils/redis", () => ({
+  redisClient: {
+    set: jest.fn(),
+    get: jest.fn(),
+    del: jest.fn(),
+    expireAt: jest.fn(),
+  },
+}));
+
+jest.mock("../../src/utils/jwt", () => ({
+  generateAccessToken: jest.fn(() => "mockAccessToken"),
+  generateRefreshToken: jest.fn(() => "mockRefreshToken"),
+}));
 const getMockReqAndRes = () => {
   const mockReq = {
     body: { email: "test1@test.com", password: "passWord1" },
@@ -125,5 +141,60 @@ describe("Login Controller", () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       error: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
     });
+  });
+});
+
+describe("logout Controller", () => {
+  let req: Partial<Request>;
+  let res: Partial<Response>;
+
+  beforeEach(() => {
+    // Reset mocks and create fresh request/response objects for each test
+    jest.clearAllMocks();
+    req = {
+      headers: {},
+    };
+    res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+      end: jest.fn(),
+    };
+  });
+
+  it("should return 400 if no token is provided", async () => {
+    // Simulate a request with no token
+    req.headers = {};
+
+    await logout(req as Request, res as Response);
+
+    // Assertions
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ message: "No token provided." });
+    expect(redisClient.set).not.toHaveBeenCalled();
+    expect(redisClient.expireAt).not.toHaveBeenCalled();
+  });
+
+  it("should invalidate the token and return 204 if token is provided", async () => {
+    // Simulate a request with a token
+    const token = "valid-token";
+    req.headers = { authorization: `Bearer ${token}` };
+
+    // Mock Redis methods to resolve successfully
+    (redisClient.set as jest.Mock).mockResolvedValue("OK");
+    (redisClient.expireAt as jest.Mock).mockResolvedValue(1);
+
+    await logout(req as Request, res as Response);
+
+    // Assertions
+    expect(redisClient.set).toHaveBeenCalledWith(
+      `invalidated:${token}`,
+      "true"
+    );
+    expect(redisClient.expireAt).toHaveBeenCalledWith(
+      `invalidated:${token}`,
+      Math.floor(Date.now() / 1000) + 3600
+    );
+    expect(res.status).toHaveBeenCalledWith(204);
+    expect(res.end).toHaveBeenCalled();
   });
 });

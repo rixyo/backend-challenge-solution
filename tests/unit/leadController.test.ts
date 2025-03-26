@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import dotenv from "dotenv";
 import Lead from "../../src/models/Lead";
 import {
   createLead,
@@ -9,6 +10,7 @@ import {
 } from "../../src/controllers/leadController";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "../../src/constants/messages";
 
+dotenv.config();
 jest.mock("../../src/models/Lead");
 
 const getMockReqAndRes = () => {
